@@ -7,21 +7,21 @@ class AnswerTool < MCP::AbstractTool
   @@tool_name = "get_answer"
   @@tool_description = "Returns 42 as the answer to any question you ask"
   @@tool_input_schema = {
-    "type"       => JSON::Any.new("object"),
-    "properties" => JSON::Any.new({
-      "question" => JSON::Any.new({
-        "type"        => JSON::Any.new("string"),
-        "description" => JSON::Any.new("The question you want answered"),
-      }),
-    }),
-    "required" => JSON::Any.new([JSON::Any.new("question")]),
-  }
+    "type"       => "object",
+    "properties" => {
+      "question" => {
+        "type"        => "string",
+        "description" => "The question you want answered",
+      },
+    },
+    "required" => ["question"],
+  }.to_json
 
-  def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil) : Hash(String, JSON::Any)
+  def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil)
     question = params["question"]?.try(&.as_s) || "unknown question"
     {
-      "answer"   => JSON::Any.new(42),
-      "question" => JSON::Any.new(question),
+      "answer"   => 42,
+      "question" => question,
     }
   end
 end

@@ -17,15 +17,12 @@ end
 abstract class MCP::AbstractTool
   getter name : String
   getter description : String
-  getter input_schema : Hash(String, JSON::Any)
+  getter input_schema : String
 
   # Class properties that can be overridden by subclasses
   class_property tool_name : String = "tool"
   class_property tool_description : String = "A generic tool"
-  class_property tool_input_schema : Hash(String, JSON::Any) = {
-    "type"       => JSON::Any.new("object"),
-    "properties" => JSON::Any.new({} of String => JSON::Any),
-  }
+  class_property tool_input_schema : String = "{\"type\": \"object\", \"properties\": {}}"
 
   def initialize
     @name = @@tool_name
@@ -42,5 +39,5 @@ abstract class MCP::AbstractTool
     {% end %}
   end
 
-  abstract def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil) : Hash(String, JSON::Any) | Hash(String, Array(JSON::Any))
+  abstract def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil)
 end

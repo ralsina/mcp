@@ -30,13 +30,13 @@ class MyTool < MCP::AbstractTool
   @@tool_name = "my_tool"
   @@tool_description = "A simple example tool that returns 42"
   @@tool_input_schema = {
-    "type"       => JSON::Any.new("object"),
-    "properties" => JSON::Any.new({} of String => JSON::Any),
-  }
+    "type"       => "object",
+    "properties" => {} of String => String,
+  }.to_json
 
-  def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil) : Hash(String, JSON::Any)
+  def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil)
     {
-      "result" => JSON::Any.new(42)
+      "result" => 42
     }
   end
 end
@@ -58,20 +58,20 @@ class EchoTool < MCP::AbstractTool
   @@tool_name = "echo"
   @@tool_description = "Echoes back the input message"
   @@tool_input_schema = {
-    "type"       => JSON::Any.new("object"),
-    "properties" => JSON::Any.new({
-      "message" => JSON::Any.new({
-        "type"        => JSON::Any.new("string"),
-        "description" => JSON::Any.new("Message to echo back"),
-      }),
-    }),
-    "required" => JSON::Any.new(["message"]),
-  }
+    "type"       => "object",
+    "properties" => {
+      "message" => {
+        "type"        => "string",
+        "description" => "Message to echo back",
+      },
+    },
+    "required" => ["message"],
+  }.to_json
 
-  def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil) : Hash(String, JSON::Any)
+  def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil)
     message = params["message"]?.try(&.as_s) || "no message"
     {
-      "echo" => JSON::Any.new(message)
+      "echo" => message
     }
   end
 end
@@ -116,21 +116,22 @@ class MyTool < MCP::AbstractTool
   @@tool_name = "my_tool"
   @@tool_description = "Does something useful"
   @@tool_input_schema = {
-    "type" => JSON::Any.new("object"),
-    "properties" => JSON::Any.new({
-      "input" => JSON::Any.new({
-        "type" => JSON::Any.new("string"),
-        "description" => JSON::Any.new("Input parameter"),
-      }),
-    }),
-    "required" => JSON::Any.new(["input"]),
-  }
+    "type" => "object",
+    "properties" => {
+      "input" => {
+        "type" => "string",
+        "description" => "Input parameter",
+      },
+    },
+    "required" => ["input"],
+  }.to_json
 
   # Implementation
   def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil)
     # Your tool logic here
+    input_value = params["input"]?.try(&.as_s) || ""
     {
-      "result" => JSON::Any.new("processed: #{params["input"]}")
+      "result" => "processed: #{input_value}"
     }
   end
 end

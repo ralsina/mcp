@@ -7,20 +7,20 @@ class EchoTool < MCP::AbstractTool
   @@tool_name = "echo"
   @@tool_description = "Echoes back the input message"
   @@tool_input_schema = {
-    "type"       => JSON::Any.new("object"),
-    "properties" => JSON::Any.new({
-      "message" => JSON::Any.new({
-        "type"        => JSON::Any.new("string"),
-        "description" => JSON::Any.new("Message to echo back"),
-      }),
-    }),
-    "required" => JSON::Any.new([JSON::Any.new("message")]),
-  }
+    "type"       => "object",
+    "properties" => {
+      "message" => {
+        "type"        => "string",
+        "description" => "Message to echo back",
+      },
+    },
+    "required" => ["message"],
+  }.to_json
 
-  def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil) : Hash(String, JSON::Any)
+  def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil)
     message = params["message"]?.try(&.as_s) || "no message"
     {
-      "echo" => JSON::Any.new(message),
+      "echo" => message,
     }
   end
 end
@@ -29,28 +29,28 @@ class MathTool < MCP::AbstractTool
   @@tool_name = "math_add"
   @@tool_description = "Adds two numbers together"
   @@tool_input_schema = {
-    "type"       => JSON::Any.new("object"),
-    "properties" => JSON::Any.new({
-      "a" => JSON::Any.new({
-        "type"        => JSON::Any.new("number"),
-        "description" => JSON::Any.new("First number"),
-      }),
-      "b" => JSON::Any.new({
-        "type"        => JSON::Any.new("number"),
-        "description" => JSON::Any.new("Second number"),
-      }),
-    }),
-    "required" => JSON::Any.new([JSON::Any.new("a"), JSON::Any.new("b")]),
-  }
+    "type"       => "object",
+    "properties" => {
+      "a" => {
+        "type"        => "number",
+        "description" => "First number",
+      },
+      "b" => {
+        "type"        => "number",
+        "description" => "Second number",
+      },
+    },
+    "required" => ["a", "b"],
+  }.to_json
 
-  def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil) : Hash(String, JSON::Any)
+  def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil)
     a = params["a"]?.try(&.as_f) || 0.0
     b = params["b"]?.try(&.as_f) || 0.0
     result = a + b
 
     {
-      "result"    => JSON::Any.new(result),
-      "operation" => JSON::Any.new("#{a} + #{b} = #{result}"),
+      "result"    => result,
+      "operation" => "#{a} + #{b} = #{result}",
     }
   end
 end
@@ -59,21 +59,21 @@ class RequestInfoTool < MCP::AbstractTool
   @@tool_name = "request_info"
   @@tool_description = "Returns information about the current HTTP request"
   @@tool_input_schema = {
-    "type"       => JSON::Any.new("object"),
-    "properties" => JSON::Any.new({} of String => JSON::Any),
-  }
+    "type"       => "object",
+    "properties" => {} of String => String,
+  }.to_json
 
-  def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil) : Hash(String, JSON::Any)
+  def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil)
     if env
       {
-        "method"         => JSON::Any.new(env.request.method),
-        "path"           => JSON::Any.new(env.request.path),
-        "user_agent"     => JSON::Any.new(env.request.headers["User-Agent"]? || "unknown"),
-        "remote_address" => JSON::Any.new(env.request.remote_address.to_s),
+        "method"         => env.request.method,
+        "path"           => env.request.path,
+        "user_agent"     => env.request.headers["User-Agent"]? || "unknown",
+        "remote_address" => env.request.remote_address.to_s,
       }
     else
       {
-        "error" => JSON::Any.new("No HTTP context available"),
+        "error" => "No HTTP context available",
       }
     end
   end

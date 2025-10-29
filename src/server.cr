@@ -115,7 +115,7 @@ class MCP::Server
       {
         "name"        => tool.name,
         "description" => tool.description,
-        "inputSchema" => tool.input_schema,
+        "inputSchema" => JSON.parse(tool.input_schema),
       }
     end
 

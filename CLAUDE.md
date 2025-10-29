@@ -75,19 +75,20 @@ class MyTool < MCP::AbstractTool
   @@tool_name = "my_tool"
   @@tool_description = "Tool description"
   @@tool_input_schema = {
-    "type" => JSON::Any.new("object"),
-    "properties" => JSON::Any.new({
-      "param" => JSON::Any.new({
-        "type" => JSON::Any.new("string"),
-        "description" => JSON::Any.new("Parameter description")
-      })
-    }),
-    "required" => JSON::Any.new(["param"])
-  }
+    "type" => "object",
+    "properties" => {
+      "param" => {
+        "type" => "string",
+        "description" => "Parameter description"
+      }
+    },
+    "required" => ["param"]
+  }.to_json
 
   def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil)
     # Tool implementation
-    {"result" => JSON::Any.new("processed")}
+    param_value = params["param"]?.try(&.as_s) || ""
+    {"result" => "processed: #{param_value}"}
   end
 end
 ```
