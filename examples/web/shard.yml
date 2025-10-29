@@ -1,0 +1,12 @@
+name: web_mcp_example
+version: 0.1.0
+
+dependencies:
+  kemal:
+    github: kemalcr/kemal
+  mcp:
+    path: ../../
+
+targets:
+  web_mcp:
+    main: src/server.cr

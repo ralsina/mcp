@@ -1,0 +1,10 @@
+name: basic_mcp_example
+version: 0.1.0
+
+dependencies:
+  mcp:
+    path: ../../
+
+targets:
+  basic_mcp:
+    main: src/simple_stdio.cr

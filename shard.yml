@@ -1,0 +1,15 @@
+name: mcp
+version: 0.1.0
+
+description: MCP (Model Context Protocol) server framework for Crystal
+
+authors:
+  - Roberto Alsina <roberto.alsina@gmail.com>
+
+crystal: '>= 1.16.0'
+
+dependencies:
+  kemal:
+    github: kemalcr/kemal
+
+license: MIT
