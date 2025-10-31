@@ -1,5 +1,7 @@
 require "./server"
 require "./tool"
+require "./prompt"
+require "./resource"
 require "./kemal_handler"
 require "./stdio_handler"
 require "./interfaces"

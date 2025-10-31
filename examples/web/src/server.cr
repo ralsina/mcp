@@ -1,6 +1,13 @@
 require "kemal"
 require "mcp"
 
+# Import our example prompts and resources
+require "./greeting_prompt"
+require "./code_review_prompt"
+require "./log_file_resource"
+require "./memory_resource"
+require "./config_resource"
+
 # Define some example tools for the web-based MCP server
 
 class EchoTool < MCP::AbstractTool
@@ -138,9 +145,11 @@ end
 # Health check endpoint
 get "/health" do
   {
-    "status" => "ok",
-    "server" => "MCP Web Example",
-    "tools"  => MCP.registered_tools.keys,
+    "status"    => "ok",
+    "server"    => "MCP Web Example",
+    "tools"     => MCP.registered_tools.keys,
+    "prompts"   => MCP.registered_prompts.keys,
+    "resources" => MCP.registered_resources.keys,
   }.to_json
 end
 
@@ -192,8 +201,23 @@ get "/" do
             <li><strong>request_info</strong> - Returns HTTP request information</li>
         </ul>
 
-        <h2>Example Tool Call</h2>
-        <pre>curl -X POST http://localhost:3000/mcp \\
+        <h2>Available Prompts</h2>
+        <ul>
+            <li><strong>greeting</strong> - Generate personalized greeting messages</li>
+            <li><strong>code_review</strong> - Generate code review prompts</li>
+        </ul>
+
+        <h2>Available Resources</h2>
+        <ul>
+            <li><strong>log://server.log</strong> - Server log file access</li>
+            <li><strong>system://memory</strong> - System memory information</li>
+            <li><strong>config://server</strong> - Server configuration</li>
+        </ul>
+
+        <h2>Example API Calls</h2>
+
+        <h3>Tool Call</h3>
+        <pre>curl -X POST http://localhost:3001/mcp \\
   -H "Content-Type: application/json" \\
   -H "User-Id: test-user" \\
   -d '{
@@ -203,6 +227,37 @@ get "/" do
     "params": {
       "name": "echo",
       "arguments": {"message": "Hello from MCP!"}
+    }
+  }'</pre>
+
+        <h3>Prompt Call</h3>
+        <pre>curl -X POST http://localhost:3001/mcp \\
+  -H "Content-Type: application/json" \\
+  -H "User-Id: test-user" \\
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "prompts/get",
+    "params": {
+      "name": "greeting",
+      "arguments": {
+        "name": "Alice",
+        "time_of_day": "morning",
+        "formal": true
+      }
+    }
+  }'</pre>
+
+        <h3>Resource Read</h3>
+        <pre>curl -X POST http://localhost:3001/mcp \\
+  -H "Content-Type: application/json" \\
+  -H "User-Id: test-user" \\
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "resources/read",
+    "params": {
+      "uri": "config://server"
     }
   }'</pre>
     </body>
@@ -217,6 +272,8 @@ Kemal.config.host_binding = "0.0.0.0"
 
 puts "Starting MCP Web Server on http://localhost:3001"
 puts "Available tools: #{MCP.registered_tools.keys.join(", ")}"
+puts "Available prompts: #{MCP.registered_prompts.keys.join(", ")}"
+puts "Available resources: #{MCP.registered_resources.keys.join(", ")}"
 puts "Endpoints:"
 puts "  POST /mcp - JSON-RPC endpoint"
 puts "  GET  /mcp - Server-Sent Events"

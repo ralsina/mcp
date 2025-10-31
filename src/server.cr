@@ -1,6 +1,8 @@
 require "kemal"
 require "json"
 require "./tool"
+require "./prompt"
+require "./resource"
 require "./interfaces"
 
 # Lightweight MCP 2024-11-05 Server Implementation
@@ -43,6 +45,16 @@ class MCP::Server
       handle_tools_list(params, id)
     when "tools/call"
       handle_tools_call(params, id, user_id, request_env)
+    when "prompts/list"
+      handle_prompts_list(params, id)
+    when "prompts/get"
+      handle_prompts_get(params, id, request_env)
+    when "resources/list"
+      handle_resources_list(params, id)
+    when "resources/read"
+      handle_resources_read(params, id, request_env)
+    when "resources/subscribe"
+      handle_resources_subscribe(params, id, request_env)
     else
       send_error(-32601, "Method not found: #{method}", id)
     end
@@ -97,6 +109,13 @@ class MCP::Server
         "protocolVersion" => "2024-11-05",
         "capabilities"    => {
           "tools" => {
+            "listChanged" => true,
+          },
+          "prompts" => {
+            "listChanged" => true,
+          },
+          "resources" => {
+            "subscribe"   => true,
             "listChanged" => true,
           },
         },
@@ -158,6 +177,135 @@ class MCP::Server
       response.to_json
     rescue ex : Exception
       send_error(-32602, "Tool error: #{ex.message}", id)
+    end
+  end
+
+  private def handle_prompts_list(params, id)
+    prompts_list = MCP.registered_prompts.values.map(&.prompt_metadata)
+
+    response = {
+      "jsonrpc" => "2.0",
+      "id"      => id,
+      "result"  => {
+        "prompts" => prompts_list,
+      },
+    }
+
+    response.to_json
+  end
+
+  private def handle_prompts_get(params, id, env)
+    prompt_name = params["name"]?.try(&.as_s)
+
+    unless prompt_name
+      return send_error(-32602, "Missing prompt name", id)
+    end
+
+    prompt_class = MCP.registered_prompts[prompt_name]?
+    unless prompt_class
+      return send_error(-32602, "Unknown prompt: #{prompt_name}", id)
+    end
+
+    prompt_instance = prompt_class.new
+    arguments = params["arguments"]?.try(&.as_h) || {} of String => JSON::Any
+
+    begin
+      result = prompt_instance.invoke(arguments, env)
+
+      response = {
+        "jsonrpc" => "2.0",
+        "id"      => id,
+        "result"  => {
+          "description" => prompt_class.prompt_description,
+          "messages"    => result["messages"]? || [] of JSON::Any,
+        },
+      }
+
+      response.to_json
+    rescue ex : Exception
+      send_error(-32602, "Prompt error: #{ex.message}", id)
+    end
+  end
+
+  private def handle_resources_list(params, id)
+    resources_list = MCP.registered_resources.values.map(&.resource_metadata)
+
+    response = {
+      "jsonrpc" => "2.0",
+      "id"      => id,
+      "result"  => {
+        "resources" => resources_list,
+      },
+    }
+
+    response.to_json
+  end
+
+  private def handle_resources_read(params, id, env)
+    uri = params["uri"]?.try(&.as_s)
+
+    unless uri
+      return send_error(-32602, "Missing resource URI", id)
+    end
+
+    resource_class = MCP.registered_resources[uri]?
+    unless resource_class
+      return send_error(-32602, "Resource not found: #{uri}", id)
+    end
+
+    resource_instance = resource_class.new
+
+    begin
+      content = resource_instance.read(env)
+
+      response = {
+        "jsonrpc" => "2.0",
+        "id"      => id,
+        "result"  => {
+          "contents" => [{
+            "uri"      => uri,
+            "mimeType" => resource_class.resource_mime_type,
+            "text"     => content,
+          }],
+        },
+      }
+
+      response.to_json
+    rescue ex : Exception
+      send_error(-32602, "Resource read error: #{ex.message}", id)
+    end
+  end
+
+  private def handle_resources_subscribe(params, id, env)
+    uri = params["uri"]?.try(&.as_s)
+
+    unless uri
+      return send_error(-32602, "Missing resource URI", id)
+    end
+
+    resource_class = MCP.registered_resources[uri]?
+    unless resource_class
+      return send_error(-32602, "Resource not found: #{uri}", id)
+    end
+
+    resource_instance = resource_class.new
+
+    unless resource_instance.supports_subscription?
+      return send_error(-32602, "Resource does not support subscription: #{uri}", id)
+    end
+
+    begin
+      result = resource_instance.subscribe(env)
+
+      response = {
+        "jsonrpc" => "2.0",
+        "id"      => id,
+        "result"  => result,
+      }
+
+      response.to_json
+    rescue ex : Exception
+      send_error(-32602, "Resource subscription error: #{ex.message}", id)
     end
   end
 
