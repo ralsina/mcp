@@ -39,7 +39,7 @@ module MCP
     # Default implementation does nothing
     def subscribe(env : HTTP::Server::Context? = nil) : Hash(String, JSON::Any)
       {
-        "message" => JSON::Any.new("Subscription not supported for this resource")
+        "message" => JSON::Any.new("Subscription not supported for this resource"),
       }
     end
 
@@ -62,10 +62,10 @@ module MCP
     protected def create_response(content : String, metadata : Hash(String, String)? = nil) : Hash(String, JSON::Any)
       response = {
         "contents" => JSON::Any.new([{
-          "uri"         => JSON::Any.new(self.class.resource_uri),
-          "mimeType"    => JSON::Any.new(self.class.resource_mime_type),
-          "text"        => JSON::Any.new(content),
-        } of String => JSON::Any])
+          "uri"      => JSON::Any.new(self.class.resource_uri),
+          "mimeType" => JSON::Any.new(self.class.resource_mime_type),
+          "text"     => JSON::Any.new(content),
+        } of String => JSON::Any]),
       }
 
       if metadata

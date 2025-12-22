@@ -7,8 +7,8 @@ require "./interfaces"
 
 # Lightweight MCP 2024-11-05 Server Implementation
 class MCP::Server
-  @config : MCPConfig
-  @logger : LogProvider
+  property config : MCPConfig
+  property logger : LogProvider
 
   def initialize(@config : MCPConfig = DefaultMCPConfig.new, @logger : LogProvider = DefaultLogProvider.new)
     # Tools will be loaded dynamically at request time

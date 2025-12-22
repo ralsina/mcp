@@ -11,6 +11,7 @@ shards build
 
 # Build all example binaries
 cd examples/basic && shards build
+cd examples/web && shards build
 ```
 
 ### Running Examples
@@ -19,7 +20,10 @@ cd examples/basic && shards build
 cd examples/basic && ./bin/basic_mcp
 
 # Alternative stdio server
-crystal examples/basic/src/easy_stdio.cr
+crystal examples/basic/src/simple_stdio.cr
+
+# Web-based MCP server
+cd examples/web && ./bin/web_mcp
 ```
 
 ### Linting and Code Quality
@@ -39,7 +43,7 @@ ameba
 
 ## Architecture Overview
 
-This is a Crystal shard/library for implementing MCP (Model Context Protocol) servers. The library provides both stdio and web-based MCP server capabilities.
+This is a Crystal shard/library for implementing MCP (Model Context Protocol) servers. The library provides both stdio and web-based MCP server capabilities with support for tools, prompts, and resources.
 
 ### Core Components
 
@@ -49,9 +53,14 @@ This is a Crystal shard/library for implementing MCP (Model Context Protocol) se
 - Global registry `MCP.registered_tools` maintains all available tools
 - Tools define their schema using class properties: `tool_name`, `tool_description`, `tool_input_schema`
 
+**Extended Features:**
+- `MCP::AbstractPrompt` (src/prompt.cr:16) - Base class for prompts with automatic registration
+- `MCP::AbstractResource` (src/resource.cr:16) - Base class for resources with automatic registration
+- Global registries for prompts and resources similar to tools
+
 **Server Architecture:**
-- `MCP::Server` (src/server.cr:7) - Main JSON-RPC 2.0 server implementation
-- `MCP::StdioHandler` (src/stdio_handler.cr:4) - Simple stdin/stdout server for CLI usage
+- `MCP::Server` (src/server.cr:9) - Main JSON-RPC 2.0 server implementation
+- `MCP::StdioHandler` (src/stdio_handler.cr:7) - Simple stdin/stdout server for CLI usage
 - `MCP::Handler` (src/kemal_handler.cr:6) - Kemal web framework integration layer
 
 **Interface-Based Design:**
@@ -65,6 +74,11 @@ Supports MCP 2024-11-05 standard and 2025-06-18 (Claude compatibility) with thes
 - `initialize` - Protocol negotiation and capability exchange
 - `tools/list` - List available tools with metadata
 - `tools/call` - Execute tools with parameters
+- `prompts/list` - List available prompts
+- `prompts/get` - Get prompt content
+- `resources/list` - List available resources
+- `resources/read` - Read resource content
+- `resources/subscribe` - Subscribe to resource changes
 
 ### Tool Implementation Pattern
 
@@ -93,6 +107,45 @@ class MyTool < MCP::AbstractTool
 end
 ```
 
+### Prompt and Resource Patterns
+
+#### Prompt Implementation
+```crystal
+class MyPrompt < MCP::AbstractPrompt
+  @@prompt_name = "my_prompt"
+  @@prompt_description = "A helpful prompt"
+  @@prompt_arguments = {
+    "type" => "object",
+    "properties" => {
+      "context" => {"type" => "string"}
+    }
+  }.to_json
+
+  def invoke(arguments : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil)
+    context = get_argument(arguments, "context")
+    {"messages" => [{"role" => "user", "content" => "Context: #{context}"}]}
+  end
+end
+```
+
+#### Resource Implementation
+```crystal
+class MyResource < MCP::AbstractResource
+  @@resource_uri = "mcp://example/my_resource"
+  @@resource_name = "My Resource"
+  @@resource_description = "A sample resource"
+  @@resource_mime_type = "text/plain"
+
+  def read(env : HTTP::Server::Context? = nil) : String
+    "Resource content here"
+  end
+
+  def supports_subscription? : Bool
+    true
+  end
+end
+```
+
 ### Deployment Modes
 
 **Stdio Mode:** Simple command-line servers using `MCP::StdioHandler.start_server`
@@ -107,6 +160,9 @@ end
 - `src/stdio_handler.cr` - Stdio server implementation
 - `src/kemal_handler.cr` - Kemal web framework integration
 - `src/interfaces.cr` - Abstract interfaces for dependencies
-- `examples/basic/` - Working example implementations
+- `src/prompt.cr` - Prompt base class and registration
+- `src/resource.cr` - Resource base class and registration
+- `examples/basic/` - Simple stdio server with prompts and resources
+- `examples/web/` - Web-based server with Kemal integration
 
 The design emphasizes modularity, automatic registration, and support for both simple stdio servers and full web-based implementations with authentication and logging.
