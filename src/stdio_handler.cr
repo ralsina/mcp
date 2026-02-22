@@ -45,10 +45,10 @@ class MCP::StdioHandler
 
   # Start a simple stdio MCP server that runs until stdin is closed
   def self.start_server(user_id : String = "stdio_user")
-    puts "MCP stdio server started. Available tools:"
-    puts MCP.registered_tools.keys.join(", ")
-    puts "---"
-    STDOUT.flush
+    STDERR.puts "MCP stdio server started. Available tools:"
+    STDERR.puts MCP.registered_tools.keys.join(", ")
+    STDERR.puts "---"
+    STDERR.flush
 
     while !STDIN.closed?
       begin
