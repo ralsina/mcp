@@ -144,18 +144,70 @@ class MCP::StdioHandler
 
     begin
       # Call tool with no environment (stdio doesn't have HTTP context)
-      result = tool.invoke(arguments, nil)
+      raw_result = tool.invoke(arguments, nil)
+
+      # Wrap result in MCP content format if not already wrapped
+      wrapped_result = wrap_tool_result(raw_result)
 
       response = {
         "jsonrpc" => "2.0",
         "id"      => id,
-        "result"  => result,
+        "result"  => wrapped_result,
       }
 
       response.to_json
     rescue ex : Exception
       send_error(-32602, "Tool error: #{ex.message}", id)
     end
+  end
+
+  # Wraps tool result in MCP content format with backwards compatibility
+  # If the result already has the correct structure, pass it through
+  private def self.wrap_tool_result(result) : Hash(String, JSON::Any)
+    # Convert result to JSON::Any for uniform handling
+    result_as_any = JSON.parse(result.to_json)
+
+    # Check if already wrapped (has "content" key with array value)
+    if result_as_any.as_h?.try(&.has_key?("content"))
+      content = result_as_any["content"]
+      if content.as_a?
+        # Already wrapped correctly - return as-is
+        return result_as_any.as_h
+      end
+    end
+
+    # Not wrapped - wrap in standard MCP content format
+    # Determine content type based on result structure
+    content_array = build_content_array(result_as_any)
+
+    {
+      "content" => JSON::Any.new(content_array),
+    }
+  end
+
+  # Builds content array from tool result
+  private def self.build_content_array(result : JSON::Any) : Array(JSON::Any)
+    result_hash = result.as_h?
+
+    # Check if result looks like a pre-formatted content item (has "type" field)
+    if result_hash && result_hash.has_key?("type")
+      return [result]
+    end
+
+    # Default: wrap as text content
+    # Convert result hash to JSON string for text content
+    text_content = if result_hash && result_hash.size == 1 && result_hash.has_key?("text")
+                     # Single "text" key - use it directly
+                     result_hash["text"].as_s
+                   else
+                     # Multiple keys or complex structure - stringify the whole result
+                     result.to_json
+                   end
+
+    [JSON::Any.new({
+      "type" => JSON::Any.new("text"),
+      "text" => JSON::Any.new(text_content),
+    } of String => JSON::Any)]
   end
 
   private def self.handle_prompts_list(params, id)
