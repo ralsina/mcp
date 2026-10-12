@@ -4,10 +4,25 @@ require "json"
 module MCP
   @@registered_tools = {} of String => AbstractTool
 
+  # Subclasses are collected when defined and instantiated lazily: the
+  # `inherited` hook fires BEFORE the subclass's body runs, so reading
+  # its tool_name there would only ever see the base defaults.
+  @@tool_subclasses = [] of AbstractTool.class
+
+  def self.tool_subclasses
+    @@tool_subclasses
+  end
+
   def self.registered_tools
+    @@tool_subclasses.each do |subclass|
+      tool = subclass.new
+      @@registered_tools[tool.name] = tool
+    end
+    @@tool_subclasses.clear
     @@registered_tools
   end
 
+  # Explicit registration, overriding the lazy one.
   def self.register_tool(name : String, tool : AbstractTool)
     @@registered_tools[name] = tool
   end
@@ -30,13 +45,10 @@ abstract class MCP::AbstractTool
     @input_schema = @@tool_input_schema
   end
 
-  # Register this tool when the file is loaded
+  # Collect the subclass; it is registered (with the name its body
+  # assigned) the first time the registry is read.
   macro inherited
-    # Register the tool in the framework's registry
-    {% begin %}
-      tool_name = {{@type}}.tool_name
-      MCP.register_tool(tool_name, {{@type}}.new)
-    {% end %}
+    MCP.tool_subclasses << {{@type}}
   end
 
   abstract def invoke(params : Hash(String, JSON::Any), env : HTTP::Server::Context? = nil)
