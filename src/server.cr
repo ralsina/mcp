@@ -95,12 +95,11 @@ class MCP::Server
   end
 
   private def handle_initialize(params, id)
+    # Version negotiation per the spec: if we don't support the
+    # client's version, respond with OUR latest supported version and
+    # let the client decide — never reject the handshake outright.
     client_version = params["protocolVersion"]?.try(&.as_s)
-
-    # Accept 2025-06-18 (Claude) and 2024-11-05 (standard)
-    unless client_version == "2025-06-18" || client_version == "2024-11-05"
-      return send_error(-32602, "Unsupported protocol version: #{client_version}", id)
-    end
+    @logger.warn("Client protocol version #{client_version.inspect} not supported; answering with #{@config.protocol_version.inspect}") if client_version != "2024-11-05"
 
     response = {
       "jsonrpc" => "2.0",
