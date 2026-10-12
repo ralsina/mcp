@@ -2,12 +2,23 @@ module MCP
   # Global registry for all resources
   @@registered_resources = {} of String => AbstractResource.class
 
+  # Collected at `inherited` time, registered lazily (see tool.cr).
+  @@resource_subclasses = [] of AbstractResource.class
+
+  def self.resource_subclasses
+    @@resource_subclasses
+  end
+
   # Returns all registered resources
   def self.registered_resources
+    @@resource_subclasses.each do |resource_class|
+      @@registered_resources[resource_class.resource_uri] = resource_class
+    end
+    @@resource_subclasses.clear
     @@registered_resources
   end
 
-  # Registers a resource class
+  # Registers a resource class explicitly, overriding the lazy one
   def self.register_resource(resource_class : AbstractResource.class)
     @@registered_resources[resource_class.resource_uri] = resource_class
   end
@@ -20,9 +31,10 @@ module MCP
     class_property resource_description : String = ""
     class_property resource_mime_type : String = "text/plain"
 
-    # Macro to automatically register resource classes
+    # Collect the subclass; registered (with the resource_uri its body
+    # assigned) the first time the registry is read.
     macro inherited
-      MCP.register_resource({{@type}})
+      MCP.resource_subclasses << {{@type}}
     end
 
     # Abstract method that must be implemented by subclasses

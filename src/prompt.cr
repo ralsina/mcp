@@ -2,12 +2,23 @@ module MCP
   # Global registry for all prompts
   @@registered_prompts = {} of String => AbstractPrompt.class
 
+  # Collected at `inherited` time, registered lazily (see tool.cr).
+  @@prompt_subclasses = [] of AbstractPrompt.class
+
+  def self.prompt_subclasses
+    @@prompt_subclasses
+  end
+
   # Returns all registered prompts
   def self.registered_prompts
+    @@prompt_subclasses.each do |prompt_class|
+      @@registered_prompts[prompt_class.prompt_name] = prompt_class
+    end
+    @@prompt_subclasses.clear
     @@registered_prompts
   end
 
-  # Registers a prompt class
+  # Registers a prompt class explicitly, overriding the lazy one
   def self.register_prompt(prompt_class : AbstractPrompt.class)
     @@registered_prompts[prompt_class.prompt_name] = prompt_class
   end
@@ -19,9 +30,10 @@ module MCP
     class_property prompt_description : String = ""
     class_property prompt_arguments : String = "{}"
 
-    # Macro to automatically register prompt classes
+    # Collect the subclass; registered (with the prompt_name its body
+    # assigned) the first time the registry is read.
     macro inherited
-      MCP.register_prompt({{@type}})
+      MCP.prompt_subclasses << {{@type}}
     end
 
     # Abstract method that must be implemented by subclasses
